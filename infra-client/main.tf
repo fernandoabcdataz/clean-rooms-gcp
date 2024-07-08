@@ -58,27 +58,49 @@ resource "google_storage_bucket_object" "calls_file" {
  bucket       = google_storage_bucket.data_bucket.id
 }
 
+/*
+# Get the self_link attribute
+data "null_data_source" "bucket_link" {
+    depends_on = [google_storage_bucket.data_bucket]
+
+    output {
+        bucket_self_link = google_storage_bucket.data_bucket.self_link
+        gs_link         = replace(data.null_data_source.bucket_link.self_link, "https://storage.googleapis.com/", "gs://")
+    }
+}
+
 resource "google_bigquery_table" "customer_table" {
   dataset_id = google_bigquery_dataset.customers_dataset.dataset_id
   table_id    = "customers"
 
   # Define schema for your table columns (required)
   schema = <<SCHEMA
-  id  INTEGER,
-  NAME  string,
-  ADDRESS string
-  # Add more fields and data types as needed
+    [
+    {
+      "name": "id",
+      "type": "INTEGER"
+    },
+    {
+      "name": "name",
+      "type": "STRING"
+    },
+    {
+      "name": "address",
+      "type": "STRING"
+    }
+    ]
   SCHEMA
 
   # Reference the GCS location of your CSV file
     external_data_configuration {
         source_format = "CSV"  # Specify the file format
-        source_uris = [ "${google_storage_bucket.data_bucket.self_link}/${google_storage_bucket_object.customers_file.name}" ]  # Reference the GCS bucket
+        autodetect = true
+        source_uris = [ "${data.null_data_source.bucket_link.gs_link}/${google_storage_bucket_object.customers_file.name}" ]  # Reference the GCS bucket
         # Optional: Configure how to handle leading rows (headers)
         csv_options {
             quote = "'"
             skip_leading_rows = 1  # Skip first row (assuming header)
         }
     }
-}
+}*/
 
