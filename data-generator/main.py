@@ -36,14 +36,14 @@ fake.add_provider(banking_products_provider)
 #number of customers to generate
 required_customers = 1000
 
-minimum_call_volume_per_customer = 1
+minimum_call_volume_per_customer = 0
 maximum_call_volume_per_customer = 7
 
 customer_id = 0
 customers = []
 calls = []
 for customer_id in range(required_customers):
-    customers.append(Customer(customer_id,fake.name(), fake.address().replace('\n',' ')))
+    customers.append(Customer(customer_id,fake.name(), fake.address().replace('\n',' '), fake.email()))
     for call in range(fake.random_int(minimum_call_volume_per_customer,maximum_call_volume_per_customer)):
         calls.append(Call(f"{customer_id}_{call}", 
                      customer_id, 
@@ -55,7 +55,7 @@ for customer_id in range(required_customers):
     print(f"customer {customer_id}")
 
 # Specify the fieldnames based on the properties of the Customer class
-fieldnames = ['id', 'name', 'address']
+fieldnames = ['id', 'name', 'address', 'email']
 
 # Write data to CSV file
 with open("customers.csv", mode='w', newline='') as file:
@@ -67,6 +67,7 @@ with open("customers.csv", mode='w', newline='') as file:
             'id': customer.id,
             'name': customer.name,
             'address': customer.address,
+            'email': customer.email
         })  # Write each customer as a row in the CSV file
 
 
