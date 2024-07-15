@@ -203,23 +203,23 @@ resource "google_bigquery_analytics_hub_data_exchange" "data_exchange" {
   description      = "example data exchange"
 }
 
-resource "google_bigquery_analytics_hub_listing" "listing" {
-  location         = google_bigquery_dataset.customers_dataset.location
-  data_exchange_id = google_bigquery_analytics_hub_data_exchange.id
-  listing_id       = "customer_calls_about_products_v2"
-  display_name     = "Customer Calls About Products"
-  description      = "Hashed customer identifier for each call received about a product and when the call occurred"
+# resource "google_bigquery_analytics_hub_listing" "listing" {
+#   location         = google_bigquery_dataset.customers_dataset.location
+#   data_exchange_id = google_bigquery_analytics_hub_data_exchange.id
+#   listing_id       = "customer_calls_about_products_v2"
+#   display_name     = "Customer Calls About Products"
+#   description      = "Hashed customer identifier for each call received about a product and when the call occurred"
 
-  bigquery_dataset {
-    dataset = google_bigquery_dataset.raw_data_exchange.id
-  }
+#   bigquery_dataset {
+#     dataset = google_bigquery_dataset.raw_data_exchange.id
+#   }
 
-  depends_on = [
-    google_bigquery_analytics_hub_data_exchange,
-    google_bigquery_dataset.raw_data_exchange,
-    google_bigquery_table.calls_about_products_table
-  ]
-}
+#   depends_on = [
+#     google_bigquery_analytics_hub_data_exchange,
+#     google_bigquery_dataset.raw_data_exchange,
+#     google_bigquery_table.calls_about_products_table
+#   ]
+# }
 
 /* Uncomment and update if using Dataform
 resource "google_dataform_repository" "repository" {

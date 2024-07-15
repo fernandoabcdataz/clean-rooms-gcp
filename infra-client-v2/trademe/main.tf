@@ -34,18 +34,6 @@ resource "google_project_service" "enable_analyticshub_api" {
   disable_on_destroy = false
 }
 
-resource "google_project_service" "enable_cloudresourcemanager_api" {
-  project = var.project_id
-  service = "cloudresourcemanager.googleapis.com"
-
-  timeouts {
-    create = "30m"
-    update = "40m"
-  }
-
-  disable_on_destroy = false
-}
-
 resource "google_bigquery_dataset" "customers_dataset" {
   dataset_id  = "client_customer"
   description = "The clients customer list"
@@ -57,7 +45,7 @@ resource "google_bigquery_dataset" "customers_dataset" {
 }
 
 resource "google_storage_bucket" "data_bucket" {
-  name     = "clean_room_raw_data"
+  name     = "${var.project_id}-clean_room_raw_data"
   location = google_bigquery_dataset.customers_dataset.location
 }
 
@@ -82,10 +70,6 @@ resource "google_bigquery_table" "customer_table" {
     },
     {
       "name": "name",
-      "type": "STRING"
-    },
-    {
-      "name": "address",
       "type": "STRING"
     },
     {
