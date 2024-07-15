@@ -134,79 +134,11 @@ resource "google_bigquery_table" "calls_table" {
   }
 }
 
-resource "google_bigquery_table" "calls_about_products_view" {
-  dataset_id = google_bigquery_dataset.customers_dataset.dataset_id
-  table_id   = "calls_about_products"
-  deletion_protection = false
-
-  view {
-    use_legacy_sql = false
-    query = <<SQLQUERY
-      SELECT
-        cust.email,
-        calls.product,
-        calls.call_datetime
-      FROM
-        `${var.project_id}.client_customer.customers` cust
-      LEFT JOIN
-        `${var.project_id}.client_customer.calls` calls
-      ON
-        cust.id = calls.customer_id
-      WHERE calls.customer_id is not null
-    SQLQUERY
-  }
-
-  depends_on = [
-    google_bigquery_table.calls_table
-  ]
-}
-
-resource "google_bigquery_analytics_hub_data_exchange" "data_exchange" {
-  location         = google_bigquery_dataset.customers_dataset.location
-  data_exchange_id = "clean_room_poc"
-  display_name     = "Clean Room Proof of Concept"
-  description      = "example data exchange"
-}
-
-resource "google_bigquery_analytics_hub_listing" "listing" {
-  location         = google_bigquery_dataset.customers_dataset.location
-  data_exchange_id = google_bigquery_analytics_hub_data_exchange.data_exchange.data_exchange_id
-  listing_id       = "customer_calls_about_products"
-  display_name     = "Customer Calls About Products"
-  description      = "Hashed customer identifier for each call received about a product and when the call occured"
-
-  bigquery_dataset {
-    dataset = google_bigquery_dataset.raw_data_exchange.id
-  }
-}
-
 resource "google_bigquery_dataset" "raw_data_exchange" {
   dataset_id    = "raw_data_exchange"
   friendly_name = "data to exchange"
   description   = "example data exchange"
   location      = google_bigquery_dataset.customers_dataset.location
-}
-
-resource "google_bigquery_table" "calls_about_products_view_raw" {
-  dataset_id = google_bigquery_dataset.raw_data_exchange.dataset_id
-  table_id   = "calls_about_products"
-  deletion_protection = false
-
-  view {
-    use_legacy_sql = false
-    query = <<SQLQUERY
-      select
-        sha256(email) hashedEmail,
-        product,
-        call_datetime
-      from
-        `client_customer.calls_about_products`
-    SQLQUERY
-  }
-
-  depends_on = [
-    google_bigquery_table.calls_about_products_view
-  ]
 }
 
 resource "google_bigquery_table" "calls_about_products_table" {
@@ -233,63 +165,103 @@ resource "google_bigquery_table" "calls_about_products_table" {
 }
 
 resource "google_bigquery_job" "load_calls_about_products_table" {
-  job_id = "load_calls_about_products_table"
-  
+  job_id = "load_calls_about_products_table_${uuid()}"
+
   query {
     query = <<SQLQUERY
       INSERT INTO `${google_bigquery_dataset.raw_data_exchange.dataset_id}.${google_bigquery_table.calls_about_products_table.table_id}`
       SELECT
-        md5(email) AS hashedEmail,
-        product,
-        call_datetime
+        md5(cust.email) AS hashed_email,
+        calls.product,
+        calls.call_datetime
       FROM
-        `client_customer.calls_about_products`
+        `${var.project_id}.client_customer.customers` cust
+      LEFT JOIN
+        `${var.project_id}.client_customer.calls` calls
+      ON
+        cust.id = calls.customer_id
+      WHERE calls.customer_id IS NOT NULL
     SQLQUERY
 
     use_legacy_sql = false
   }
 
+  lifecycle {
+    ignore_changes = [job_id]
+  }
+
   depends_on = [
     google_bigquery_table.calls_about_products_table,
-    google_bigquery_table.calls_about_products_view
+    google_bigquery_table.calls_table
   ]
 }
 
-# # Dataform setup
-# resource "google_dataform_repository" "repository" {
-#   project  = var.project_id
-#   location = google_bigquery_dataset.customers_dataset.location
-#   repository_id = "dataform-repo"
-#   display_name = "Dataform Repository"
-# }
+resource "google_bigquery_analytics_hub_data_exchange" "data_exchange" {
+  location         = google_bigquery_dataset.customers_dataset.location
+  data_exchange_id = "clean_room_poc"
+  display_name     = "Clean Room Proof of Concept"
+  description      = "example data exchange"
+}
 
-# resource "google_dataform_workspace" "workspace" {
-#   repository = google_dataform_repository.repository.name
-#   workspace_id = "main"
-# }
+# resource "google_bigquery_analytics_hub_listing" "listing" {
+#   location         = google_bigquery_dataset.customers_dataset.location
+#   data_exchange_id = google_bigquery_analytics_hub_data_exchange.id
+#   listing_id       = "customer_calls_about_products_v2"
+#   display_name     = "Customer Calls About Products"
+#   description      = "Hashed customer identifier for each call received about a product and when the call occurred"
 
-# resource "google_dataform_compilation_result" "compilation_result" {
-#   repository = google_dataform_repository.repository.name
-#   path = google_dataform_workspace.workspace.id
-#   file_contents = {
-#     "/definitions/tables/hashed_emails.sqlx" = <<SQL
-#       config {
-#         type: "table",
-#         description: "Table with hashed emails"
-#       }
-#       SELECT
-#         md5(email) AS hashedEmail,
-#         product,
-#         call_datetime
-#       FROM
-#         `${google_bigquery_dataset.raw_data_exchange.dataset_id}.calls_about_products`
-#     SQL
+#   bigquery_dataset {
+#     dataset = google_bigquery_dataset.raw_data_exchange.id
 #   }
+
+#   depends_on = [
+#     google_bigquery_analytics_hub_data_exchange,
+#     google_bigquery_dataset.raw_data_exchange,
+#     google_bigquery_table.calls_about_products_table
+#   ]
 # }
 
-# resource "google_dataform_schedule" "schedule" {
-#   repository = google_dataform_repository.repository.name
-#   schedule_id = "hashed_emails_schedule"
-#   cron_schedule = "0 * * * *" # Every hour
-#   target = google_dataform_compilation_result.compilation_result.target
-# }
+/* Uncomment and update if using Dataform
+resource "google_dataform_repository" "repository" {
+  project  = var.project_id
+  location = google_bigquery_dataset.customers_dataset.location
+  repository_id = "dataform-repo"
+  display_name = "Dataform Repository"
+}
+
+resource "google_dataform_workspace" "workspace" {
+  repository = google_dataform_repository.repository.name
+  workspace_id = "main"
+}
+
+resource "google_dataform_compilation_result" "compilation_result" {
+  repository = google_dataform_repository.repository.name
+  path = google_dataform_workspace.workspace.id
+  file_contents = {
+    "/definitions/tables/hashed_emails.sqlx" = <<SQL
+      config {
+        type: "table",
+        description: "Table with hashed emails"
+      }
+      SELECT
+        md5(cust.email) AS hashed_email,
+        calls.product,
+        calls.call_datetime
+      FROM
+        `${var.project_id}.client_customer.customers` cust
+      LEFT JOIN
+        `${var.project_id}.client_customer.calls` calls
+      ON
+        cust.id = calls.customer_id
+      WHERE calls.customer_id IS NOT NULL
+    SQL
+  }
+}
+
+resource "google_dataform_schedule" "schedule" {
+  repository = google_dataform_repository.repository.name
+  schedule_id = "hashed_emails_schedule"
+  cron_schedule = "0 * * * *" # Every hour
+  target = google_dataform_compilation_result.compilation_result.target
+}
+*/
