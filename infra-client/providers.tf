@@ -8,7 +8,7 @@ terraform {
 }
 
 provider "google" {
-  project     = "clean-room-client"
+  project     = var.project_id
   region      = "australia-southeast1"
-  credentials = "../clean-room-client-credentials.json"
+  credentials = "/Users/fernandomaximoferreira/.gcloud/service-account-key.json"
 }

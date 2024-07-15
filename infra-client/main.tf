@@ -1,12 +1,12 @@
-/*resource "google_project" "clean_room_client" {
+/* Uncomment this if you need to create a project
+resource "google_project" "clean_room_client" {
     name        = "Clean Room Client"
-    project_id  = "clean-room-client"
+    project_id  = var.project_id
+}
+*/
 
-}*/
-
-/* pointless because the api can't be enable without this API being enabled*/
 resource "google_project_service" "enable_service_usage_api" {
-  project = "clean-room-client"
+  project = var.project_id
   service = "serviceusage.googleapis.com"
 
   timeouts {
@@ -18,7 +18,7 @@ resource "google_project_service" "enable_service_usage_api" {
 }
 
 resource "google_project_service" "enable_bigquery_api" {
-  project = "clean-room-client"
+  project = var.project_id
   service = "bigquery.googleapis.com"
 
   timeouts {
@@ -62,10 +62,8 @@ resource "google_bigquery_table" "customer_table" {
   dataset_id = google_bigquery_dataset.customers_dataset.dataset_id
   table_id   = "customers"
 
-  #It's a linked table so allow TF to destroy it, if needed.
   deletion_protection = false
 
-  # Define schema for your table columns (required)
   schema = <<SCHEMA
     [
     {
@@ -87,17 +85,13 @@ resource "google_bigquery_table" "customer_table" {
     ]
   SCHEMA
 
-  # Reference the GCS location of your CSV file
   external_data_configuration {
-    source_format = "CSV" # Specify the file format
+    source_format = "CSV"
     autodetect    = true
-
-
-    source_uris = ["gs://${resource.google_storage_bucket.data_bucket.name}/${google_storage_bucket_object.customers_file.name}"] # Reference the GCS bucket
-    # Optional: Configure how to handle leading rows (headers)
+    source_uris   = ["gs://${google_storage_bucket.data_bucket.name}/${google_storage_bucket_object.customers_file.name}"]
     csv_options {
       quote             = "\""
-      skip_leading_rows = 1 # Skip first row (assuming header)
+      skip_leading_rows = 1
     }
   }
 }
@@ -106,11 +100,8 @@ resource "google_bigquery_table" "calls_table" {
   dataset_id = google_bigquery_dataset.customers_dataset.dataset_id
   table_id   = "calls"
 
-  #It's a linked table so allow TF to destroy it, if needed.
   deletion_protection = false
 
-  # Define schema for your table columns (required)
-  #id,customer_id,call_datetime,product
   schema = <<SCHEMA
     [
     {
@@ -132,17 +123,13 @@ resource "google_bigquery_table" "calls_table" {
     ]
   SCHEMA
 
-  # Reference the GCS location of your CSV file
   external_data_configuration {
-    source_format = "CSV" # Specify the file format
+    source_format = "CSV"
     autodetect    = true
-
-
-    source_uris = ["gs://${resource.google_storage_bucket.data_bucket.name}/${google_storage_bucket_object.calls_file.name}"] # Reference the GCS bucket
-    # Optional: Configure how to handle leading rows (headers)
+    source_uris   = ["gs://${google_storage_bucket.data_bucket.name}/${google_storage_bucket_object.calls_file.name}"]
     csv_options {
       quote             = "'"
-      skip_leading_rows = 1 # Skip first row (assuming header)
+      skip_leading_rows = 1
     }
   }
 }
@@ -150,19 +137,19 @@ resource "google_bigquery_table" "calls_table" {
 resource "google_bigquery_table" "calls_about_products_view" {
   dataset_id = google_bigquery_dataset.customers_dataset.dataset_id
   table_id   = "calls_about_products"
-  deletion_protection=false
+  deletion_protection = false
 
   view {
     use_legacy_sql = false
-    query          = <<SQLQUERY
+    query = <<SQLQUERY
       SELECT
         cust.email,
         calls.product,
         calls.call_datetime
       FROM
-        `clean-room-client.client_customer.customers` cust
+        `${var.project_id}.client_customer.customers` cust
       LEFT JOIN
-        `clean-room-client.client_customer.calls` calls
+        `${var.project_id}.client_customer.calls` calls
       ON
         cust.id = calls.customer_id
       WHERE calls.customer_id is not null
@@ -203,11 +190,11 @@ resource "google_bigquery_dataset" "raw_data_exchange" {
 resource "google_bigquery_table" "calls_about_products_view_raw" {
   dataset_id = google_bigquery_dataset.raw_data_exchange.dataset_id
   table_id   = "calls_about_products"
-  deletion_protection=false
+  deletion_protection = false
 
   view {
     use_legacy_sql = false
-    query          = <<SQLQUERY
+    query = <<SQLQUERY
       select
         sha256(email) hashedEmail,
         product,
@@ -222,25 +209,48 @@ resource "google_bigquery_table" "calls_about_products_view_raw" {
   ]
 }
 
-resource "google_bigquery_table" "calls_about_products_materialised_view_raw" {
+resource "google_bigquery_table" "calls_about_products_table" {
   dataset_id = google_bigquery_dataset.raw_data_exchange.dataset_id
-  table_id   = "calls_about_products_materialised"
-  deletion_protection=false
+  table_id   = "calls_about_products_table"
+  deletion_protection = false
 
-  materialized_view {
-    query          = <<SQLQUERY
-      select
-        sha256(email) hashedEmail,
+  schema = <<SCHEMA
+  [
+    {
+      "name": "hashedEmail",
+      "type": "STRING"
+    },
+    {
+      "name": "product",
+      "type": "STRING"
+    },
+    {
+      "name": "call_datetime",
+      "type": "DATETIME"
+    }
+  ]
+  SCHEMA
+}
+
+resource "google_bigquery_job" "load_calls_about_products_table" {
+  job_id = "load_calls_about_products_table"
+  
+  query {
+    query = <<SQLQUERY
+      INSERT INTO `${google_bigquery_dataset.raw_data_exchange.dataset_id}.${google_bigquery_table.calls_about_products_table.table_id}`
+      SELECT
+        md5(email) AS hashedEmail,
         product,
         call_datetime
-      from
+      FROM
         `client_customer.calls_about_products`
     SQLQUERY
+
+    use_legacy_sql = false
   }
 
   depends_on = [
+    google_bigquery_table.calls_about_products_table,
     google_bigquery_table.calls_about_products_view
   ]
 }
-
-
