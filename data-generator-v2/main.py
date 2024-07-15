@@ -54,7 +54,7 @@ fake.random.shuffle(emails_trademe)
 minimum_call_volume_per_customer = 0
 maximum_call_volume_per_customer = 7
 
-def generate_data(dataset_name, emails):
+def generate_data_iag(emails):
     customer_id = 0
     customers = []
     calls = []
@@ -67,19 +67,34 @@ def generate_data(dataset_name, emails):
         customer_id += 1
     
     # Write customers to CSV
-    with open(f"{dataset_name}_customers.csv", mode='w', newline='') as file:
+    with open("iag_customers.csv", mode='w', newline='') as file:
         writer = csv.DictWriter(file, fieldnames=['id', 'name', 'address', 'email'])
         writer.writeheader()
         for customer in customers:
             writer.writerow({'id': customer.id, 'name': customer.name, 'address': customer.address, 'email': customer.email})
     
     # Write calls to CSV
-    with open(f"{dataset_name}_calls.csv", mode='w', newline='') as file:
+    with open("iag_calls.csv", mode='w', newline='') as file:
         writer = csv.DictWriter(file, fieldnames=['id', 'customer_id', 'call_datetime', 'product'])
         writer.writeheader()
         for call in calls:
             writer.writerow({'id': call.id, 'customer_id': call.customer_id, 'call_datetime': call.call_datetime.strftime('%Y-%m-%d %H:%M:%S'), 'product': call.product})
 
+def generate_data_trademe(emails):
+    customer_id = 0
+    customers = []
+    for email in emails:
+        customer = Customer(customer_id, fake.name(), "", email)
+        customers.append(customer)
+        customer_id += 1
+    
+    # Write customers to CSV
+    with open("trademe_customers.csv", mode='w', newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=['id', 'name', 'email'])
+        writer.writeheader()
+        for customer in customers:
+            writer.writerow({'id': customer.id, 'name': customer.name, 'email': customer.email})
+
 # Generate datasets
-generate_data("iag", emails_iag)
-generate_data("trademe", emails_trademe)
+generate_data_iag(emails_iag)
+generate_data_trademe(emails_trademe)

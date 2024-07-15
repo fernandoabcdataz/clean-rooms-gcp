@@ -44,16 +44,16 @@ resource "google_storage_bucket" "data_bucket" {
   location = google_bigquery_dataset.customers_dataset.location
 }
 
-resource "google_storage_bucket_object" "customers_file" {
-  name         = "customers.csv"
-  source       = "../data-generator/customers.csv"
+resource "google_storage_bucket_object" "iag_customers_file" {
+  name         = "iag_customers.csv"
+  source       = "../../data-generator-v2/iag_customers.csv"
   content_type = "text/plain"
   bucket       = google_storage_bucket.data_bucket.id
 }
 
-resource "google_storage_bucket_object" "calls_file" {
-  name         = "calls.csv"
-  source       = "../data-generator/calls.csv"
+resource "google_storage_bucket_object" "iag_calls_file" {
+  name         = "iag_calls.csv"
+  source       = "../../data-generator-v2/iag_calls.csv"
   content_type = "text/plain"
   bucket       = google_storage_bucket.data_bucket.id
 }
@@ -88,7 +88,7 @@ resource "google_bigquery_table" "customer_table" {
   external_data_configuration {
     source_format = "CSV"
     autodetect    = true
-    source_uris   = ["gs://${google_storage_bucket.data_bucket.name}/${google_storage_bucket_object.customers_file.name}"]
+    source_uris   = ["gs://${google_storage_bucket.data_bucket.name}/${google_storage_bucket_object.iag_customers_file.name}"]
     csv_options {
       quote             = "\""
       skip_leading_rows = 1
@@ -126,57 +126,11 @@ resource "google_bigquery_table" "calls_table" {
   external_data_configuration {
     source_format = "CSV"
     autodetect    = true
-    source_uris   = ["gs://${google_storage_bucket.data_bucket.name}/${google_storage_bucket_object.calls_file.name}"]
+    source_uris   = ["gs://${google_storage_bucket.data_bucket.name}/${google_storage_bucket_object.iag_calls_file.name}"]
     csv_options {
       quote             = "'"
       skip_leading_rows = 1
     }
-  }
-}
-
-resource "google_bigquery_table" "calls_about_products_view" {
-  dataset_id = google_bigquery_dataset.customers_dataset.dataset_id
-  table_id   = "calls_about_products"
-  deletion_protection = false
-
-  view {
-    use_legacy_sql = false
-    query = <<SQLQUERY
-      SELECT
-        cust.email,
-        calls.product,
-        calls.call_datetime
-      FROM
-        `${var.project_id}.client_customer.customers` cust
-      LEFT JOIN
-        `${var.project_id}.client_customer.calls` calls
-      ON
-        cust.id = calls.customer_id
-      WHERE calls.customer_id is not null
-    SQLQUERY
-  }
-
-  depends_on = [
-    google_bigquery_table.calls_table
-  ]
-}
-
-resource "google_bigquery_analytics_hub_data_exchange" "data_exchange" {
-  location         = google_bigquery_dataset.customers_dataset.location
-  data_exchange_id = "clean_room_poc"
-  display_name     = "Clean Room Proof of Concept"
-  description      = "example data exchange"
-}
-
-resource "google_bigquery_analytics_hub_listing" "listing" {
-  location         = google_bigquery_dataset.customers_dataset.location
-  data_exchange_id = google_bigquery_analytics_hub_data_exchange.data_exchange.data_exchange_id
-  listing_id       = "customer_calls_about_products"
-  display_name     = "Customer Calls About Products"
-  description      = "Hashed customer identifier for each call received about a product and when the call occured"
-
-  bigquery_dataset {
-    dataset = google_bigquery_dataset.customers_dataset.id
   }
 }
 
@@ -185,28 +139,6 @@ resource "google_bigquery_dataset" "raw_data_exchange" {
   friendly_name = "data to exchange"
   description   = "example data exchange"
   location      = google_bigquery_dataset.customers_dataset.location
-}
-
-resource "google_bigquery_table" "calls_about_products_view_raw" {
-  dataset_id = google_bigquery_dataset.raw_data_exchange.dataset_id
-  table_id   = "calls_about_products"
-  deletion_protection = false
-
-  view {
-    use_legacy_sql = false
-    query = <<SQLQUERY
-      select
-        sha256(email) hashedEmail,
-        product,
-        call_datetime
-      from
-        `client_customer.calls_about_products`
-    SQLQUERY
-  }
-
-  depends_on = [
-    google_bigquery_table.calls_about_products_view
-  ]
 }
 
 resource "google_bigquery_table" "calls_about_products_table" {
@@ -233,24 +165,33 @@ resource "google_bigquery_table" "calls_about_products_table" {
 }
 
 resource "google_bigquery_job" "load_calls_about_products_table" {
-  job_id = "load_calls_about_products_table"
-  
+  job_id = "load_calls_about_products_table_${uuid()}"
+
   query {
     query = <<SQLQUERY
       INSERT INTO `${google_bigquery_dataset.raw_data_exchange.dataset_id}.${google_bigquery_table.calls_about_products_table.table_id}`
       SELECT
-        md5(email) AS hashedEmail,
-        product,
-        call_datetime
+        md5(cust.email) AS hashed_email,
+        calls.product,
+        calls.call_datetime
       FROM
-        `client_customer.calls_about_products`
+        `${var.project_id}.client_customer.customers` cust
+      LEFT JOIN
+        `${var.project_id}.client_customer.calls` calls
+      ON
+        cust.id = calls.customer_id
+      WHERE calls.customer_id IS NOT NULL
     SQLQUERY
 
     use_legacy_sql = false
   }
 
+  lifecycle {
+    ignore_changes = [job_id]
+  }
+
   depends_on = [
     google_bigquery_table.calls_about_products_table,
-    google_bigquery_table.calls_about_products_view
+    google_bigquery_table.calls_table
   ]
 }
