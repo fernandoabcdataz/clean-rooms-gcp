@@ -40,7 +40,7 @@ resource "google_bigquery_dataset" "customers_dataset" {
 }
 
 resource "google_storage_bucket" "data_bucket" {
-  name     = "clean_room_raw_data"
+  name     = "${var.project_id}-clean_room_raw_data"
   location = google_bigquery_dataset.customers_dataset.location
 }
 
