@@ -150,7 +150,7 @@ resource "google_bigquery_table" "calls_about_products_table" {
   [
     {
       "name": "hashedEmail",
-      "type": "STRING"
+      "type": "BYTES"
     },
     {
       "name": "product",
@@ -164,14 +164,14 @@ resource "google_bigquery_table" "calls_about_products_table" {
   SCHEMA
 }
 
-resource "google_bigquery_job" "load_calls_about_products_table" {
-  job_id = "load_calls_about_products_table_${uuid()}"
+resource "google_bigquery_job" "create_calls_about_products_table" {
+  job_id = "create_calls_about_products_table_${uuid()}"
 
   query {
     query = <<SQLQUERY
-      INSERT INTO `${google_bigquery_dataset.raw_data_exchange.dataset_id}.${google_bigquery_table.calls_about_products_table.table_id}`
+      INSERT INTO `${google_bigquery_dataset.raw_data_exchange.dataset_id}.calls_about_products_table`
       SELECT
-        md5(cust.email) AS hashed_email,
+        md5(cust.email),
         calls.product,
         calls.call_datetime
       FROM
@@ -191,17 +191,18 @@ resource "google_bigquery_job" "load_calls_about_products_table" {
   }
 
   depends_on = [
-    google_bigquery_table.calls_about_products_table,
-    google_bigquery_table.calls_table
+    google_bigquery_table.calls_table,
+    google_bigquery_table.customer_table
   ]
 }
 
-resource "google_bigquery_analytics_hub_data_exchange" "data_exchange" {
-  location         = google_bigquery_dataset.customers_dataset.location
-  data_exchange_id = "clean_room_poc"
-  display_name     = "Clean Room Proof of Concept"
-  description      = "example data exchange"
-}
+
+# resource "google_bigquery_analytics_hub_data_exchange" "data_exchange" {
+#   location         = google_bigquery_dataset.customers_dataset.location
+#   data_exchange_id = "clean_room_poc"
+#   display_name     = "Clean Room Proof of Concept"
+#   description      = "example data exchange"
+# }
 
 # resource "google_bigquery_analytics_hub_listing" "listing" {
 #   location         = google_bigquery_dataset.customers_dataset.location

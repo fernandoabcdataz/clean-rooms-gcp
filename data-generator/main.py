@@ -5,15 +5,15 @@ from Call import Call
 import csv
 from datetime import datetime, timedelta, time
 
+# Initialize Faker
+fake = Faker()
+
 banking_products_provider = DynamicProvider(
      provider_name="banking_products",
      elements=["savings", "insurance", "mortgage", "investment", "personal loan"]
 )
 
 def fakeDateTimeThisWeek():
-    # Initialize Faker
-    fake = Faker()
-
     # Define the time range (07:00 to 21:00)
     start_time = time(hour=7, minute=0)
     end_time = time(hour=21, minute=0)
@@ -30,62 +30,71 @@ def fakeDateTimeThisWeek():
 
     return fake_datetime
 
-fake = Faker()
 fake.add_provider(banking_products_provider)
 
-#number of customers to generate
-required_customers = 1000
+# Number of customers to generate for each dataset
+required_customers = 100
 
+# Generate unique emails
+unique_emails_iag = [fake.unique.email() for _ in range(90)]
+unique_emails_trademe = [fake.unique.email() for _ in range(90)]
+
+# Generate common emails
+common_emails = [fake.unique.email() for _ in range(10)]
+
+# Combine unique and common emails
+emails_iag = unique_emails_iag + common_emails
+emails_trademe = unique_emails_trademe + common_emails
+
+# Shuffle the emails to mix common emails within the datasets
+fake.random.shuffle(emails_iag)
+fake.random.shuffle(emails_trademe)
+
+# Number of calls per customer
 minimum_call_volume_per_customer = 0
 maximum_call_volume_per_customer = 7
 
-customer_id = 0
-customers = []
-calls = []
-for customer_id in range(required_customers):
-    customers.append(Customer(customer_id,fake.name(), fake.address().replace('\n',' '), fake.email()))
-    for call in range(fake.random_int(minimum_call_volume_per_customer,maximum_call_volume_per_customer)):
-        calls.append(Call(f"{customer_id}_{call}", 
-                     customer_id, 
-                     fakeDateTimeThisWeek(),
-                     fake.banking_products()
-                     )
-        )
-        print(f"call {call}")
-    print(f"customer {customer_id}")
+def generate_data_iag(emails):
+    customer_id = 0
+    customers = []
+    calls = []
+    for email in emails:
+        customer = Customer(customer_id, fake.name(), fake.address().replace('\n', ' '), email)
+        customers.append(customer)
+        for call_id in range(fake.random_int(minimum_call_volume_per_customer, maximum_call_volume_per_customer)):
+            call = Call(f"{customer_id}_{call_id}", customer_id, fakeDateTimeThisWeek(), fake.banking_products())
+            calls.append(call)
+        customer_id += 1
+    
+    # Write customers to CSV
+    with open("iag_customers.csv", mode='w', newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=['id', 'name', 'address', 'email'])
+        writer.writeheader()
+        for customer in customers:
+            writer.writerow({'id': customer.id, 'name': customer.name, 'address': customer.address, 'email': customer.email})
+    
+    # Write calls to CSV
+    with open("iag_calls.csv", mode='w', newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=['id', 'customer_id', 'call_datetime', 'product'])
+        writer.writeheader()
+        for call in calls:
+            writer.writerow({'id': call.id, 'customer_id': call.customer_id, 'call_datetime': call.call_datetime.strftime('%Y-%m-%d %H:%M:%S'), 'product': call.product})
 
-# Specify the fieldnames based on the properties of the Customer class
-fieldnames = ['id', 'name', 'address', 'email']
+def generate_data_trademe(emails):
+    customer_id = 0
+    customers = []
+    for email in emails:
+        customer = Customer(customer_id, fake.name(), "", email)
+        customers.append(customer)
+        customer_id += 1
+    
+    # Write customers to CSV
+    with open("trademe_customers.csv", mode='w', newline='') as file:
+        writer = csv.DictWriter(file, fieldnames=['id', 'name', 'email'])
+        writer.writeheader()
+        for customer in customers:
+            writer.writerow({'id': customer.id, 'name': customer.name, 'email': customer.email})
 
-# Write data to CSV file
-with open("customers.csv", mode='w', newline='') as file:
-    writer = csv.DictWriter(file, fieldnames=fieldnames)
-
-    writer.writeheader()  # Write header row based on fieldnames
-    for customer in customers:
-        writer.writerow({
-            'id': customer.id,
-            'name': customer.name,
-            'address': customer.address,
-            'email': customer.email
-        })  # Write each customer as a row in the CSV file
-
-
-fieldnames = ['id', 'customer_id', 'call_datetime', 'product']
-
-# Write data to CSV file
-with open("calls.csv", mode='w', newline='') as file:
-    writer = csv.DictWriter(file, fieldnames=fieldnames)
-
-    writer.writeheader()  # Write header row based on fieldnames
-    for call in calls:
-        writer.writerow({
-            'id': call.id,
-            'customer_id': call.customer_id,
-            'call_datetime': call.call_datetime.strftime('%Y-%m-%d %H:%M:%S'),
-            'product': call.product,
-        })  # Write each call as a row in the CSV file
-
-
-
-
+# Generate datasets
+generate_data_iag(emails_iag)
+generate_data_trademe(emails_trademe)
