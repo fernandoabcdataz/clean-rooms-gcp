@@ -1,47 +1,88 @@
-# data-clean-room-example
-Experiments with GCP data clean rooms
+# Clean Room Data Generation and Infrastructure Setup
 
-## data-generator
-The Python script generates the following files:
- - iag_customera: a list of random customers containing the fields id, name, address, email. There are 90 unique emails and 10 common email - that intersect with trademe file.
- - iag_calls: a list 
+This project demonstrates how to generate synthetic customer and call data using Python and Faker, and how to set up the infrastructure to store and query this data on Google Cloud Platform (GCP) using Terraform. The project includes data generation scripts and Terraform configurations for two use cases: IAG and TradeMe.
 
- - trademe_customera: a list of random customers containing the fields id, name, email. There are 90 unique emails and 10 common email - that intersect with iag file.
+## Project Structure
 
-Run this script following the steps:
-1. python
-2. python3 main.py
+- **Data Generation Script:** Generates synthetic customer and call data and exports it to CSV files.
+- **Terraform Configuration:** Sets up GCP infrastructure to store and query the generated data.
 
-## infra-client/iag
-Here you need to have two different GCP accounts
+## Data Generation Script
 
-## infra-client/iag
-Here, you will be prompted about your GCP data contributor account
+The script uses the `Faker` library to generate synthetic data. The data includes customer details and call logs for a fictional banking product company (IAG) and a trading platform (TradeMe).
 
-1. Create a new Service Account and assign the following roles:
+### Script Overview
 
-2. Run this script following the steps:
- - terraform init
- - terraform plan
- - terraform apply
+- **Libraries Used:**
+  - `Faker`: To generate fake data.
+  - `csv`: To export data to CSV files.
+  - `datetime`: To handle date and time operations.
 
-3. Access Google Cloud Console and create a new Clean Room
+- **Generated Data:**
+  - **IAG:**
+    - 100 customers with names, addresses, and emails.
+    - Call logs associated with the customers, including call times and banking products discussed.
+  - **TradeMe:**
+    - 100 customers with names and emails.
 
-4. Add the table ... to the Clean Room:
- - 
- - 
- - 
+### Running the Script
 
-## infra-client/trademe
-Here, you will upload trademe_customers.csv to Cloud Storage, create a BiqQuery dataset, and a federated table reading from the file uploaded.
-You will also subscribe to the Clean Room and create a query to join with data shared.
+1. Ensure you have Python installed.
+2. Install the required libraries:
+    ```bash
+    pip install faker
+    ```
+3. Run the script:
+    ```
+    python data_generator.py
+    ```
 
-1. Run terraform script to create Cloud Storage, BigQuery dataset and table
- - 
+### Output Files
 
-2. Subscribe to Clean Room
- - 
- - 
+- `iag_customers.csv`: Contains customer details for IAG.
+- `iag_calls.csv`: Contains call logs for IAG.
+- `trademe_customers.csv`: Contains customer details for TradeMe.
 
-3. Join datasets using hashemail and get list of common users
+## Terraform Configuration
 
+The Terraform configuration sets up the required GCP infrastructure to store and query the generated data. The setup includes enabling necessary APIs, creating BigQuery datasets and tables, and uploading the CSV files to Google Cloud Storage.
+
+### IAG Terraform Configuration
+
+- **Enable Necessary APIs:** `serviceusage.googleapis.com` and `bigquery.googleapis.com`.
+- **BigQuery Dataset:** `client_customer`
+- **Google Cloud Storage Bucket:** `clean_room_raw_data`
+- **BigQuery Tables:**
+  - `customers`: To store customer details.
+  - `calls`: To store call logs.
+  - `calls_about_products_table`: To store processed call data for sharing.
+
+### TradeMe Terraform Configuration
+
+- **Enable Necessary APIs:** `serviceusage.googleapis.com`, `bigquery.googleapis.com`, and `analyticshub.googleapis.com`.
+- **BigQuery Dataset:** `client_customer`
+- **Google Cloud Storage Bucket:** `clean_room_raw_data`
+- **BigQuery Table:**
+  - `customers`: To store customer details.
+
+### Running Terraform
+
+1. Ensure you have Terraform installed.
+2. Initialize the Terraform configuration:
+   ```bash
+   terraform init
+   ```
+3. Apply the Terraform configuration:
+    ```
+    terraform apply
+    ```
+
+### Notes
+
+- Ensure you have the correct permissions set up in your GCP project.
+- Update the `var.project_id` in the Terraform scripts to match your GCP project ID.
+- Uncomment and configure additional IAM roles as needed for your use case.
+
+## License
+
+This project is licensed under the MIT License.
