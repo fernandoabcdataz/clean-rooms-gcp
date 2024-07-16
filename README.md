@@ -34,7 +34,7 @@ The script uses the `Faker` library to generate synthetic data. The data include
     ```
 3. Run the script:
     ```
-    python data_generator.py
+    python main.py
     ```
 
 ### Output Files
