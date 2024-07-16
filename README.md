@@ -1,6 +1,6 @@
 # Clean Room Data Generation and Infrastructure Setup
 
-This project demonstrates how to generate synthetic customer and call data using Python and Faker, and how to set up the infrastructure to store and query this data on Google Cloud Platform (GCP) using Terraform. The project includes data generation scripts and Terraform configurations for two use cases: IAG and TradeMe.
+This project demonstrates how to generate synthetic customer and call data using Python and Faker, and how to set up the infrastructure to store and query this data on Google Cloud Platform (GCP) using Terraform. The project includes data generation scripts and Terraform configurations for two use cases: CLIENT_A and CLIENT_B.
 
 ## Project Structure
 
@@ -9,7 +9,7 @@ This project demonstrates how to generate synthetic customer and call data using
 
 ## Data Generation Script
 
-The script uses the `Faker` library to generate synthetic data. The data includes customer details and call logs for a fictional banking product company (IAG) and a trading platform (TradeMe).
+The script uses the `Faker` library to generate synthetic data. The data includes customer details and call logs for a fictional banking product company (CLIENT_A) and a trading platform (CLIENT_B).
 
 ### Script Overview
 
@@ -19,10 +19,10 @@ The script uses the `Faker` library to generate synthetic data. The data include
   - `datetime`: To handle date and time operations.
 
 - **Generated Data:**
-  - **IAG:**
+  - **CLIENT_A:**
     - 100 customers with names, addresses, and emails.
     - Call logs associated with the customers, including call times and banking products discussed.
-  - **TradeMe:**
+  - **CLIENT_B:**
     - 100 customers with names and emails.
 
 ### Running the Script
@@ -30,7 +30,7 @@ The script uses the `Faker` library to generate synthetic data. The data include
 1. Ensure you have Python installed.
 2. Install the required libraries:
     ```bash
-    pip install faker
+    pip install -r requirements.txt
     ```
 3. Run the script:
     ```
@@ -39,15 +39,15 @@ The script uses the `Faker` library to generate synthetic data. The data include
 
 ### Output Files
 
-- `iag_customers.csv`: Contains customer details for IAG.
-- `iag_calls.csv`: Contains call logs for IAG.
-- `trademe_customers.csv`: Contains customer details for TradeMe.
+- `client_a_customers.csv`: Contains customer details for CLIENT_A.
+- `client_a_calls.csv`: Contains call logs for CLIENT_A.
+- `client_b_customers.csv`: Contains customer details for CLIENT_B.
 
 ## Terraform Configuration
 
 The Terraform configuration sets up the required GCP infrastructure to store and query the generated data. The setup includes enabling necessary APIs, creating BigQuery datasets and tables, and uploading the CSV files to Google Cloud Storage.
 
-### IAG Terraform Configuration
+### CLIENT_A Terraform Configuration
 
 - **Enable Necessary APIs:** `serviceusage.googleapis.com` and `bigquery.googleapis.com`.
 - **BigQuery Dataset:** `client_customer`
@@ -57,7 +57,7 @@ The Terraform configuration sets up the required GCP infrastructure to store and
   - `calls`: To store call logs.
   - `calls_about_products_table`: To store processed call data for sharing.
 
-### TradeMe Terraform Configuration
+### CLIENT_B Terraform Configuration
 
 - **Enable Necessary APIs:** `serviceusage.googleapis.com`, `bigquery.googleapis.com`, and `analyticshub.googleapis.com`.
 - **BigQuery Dataset:** `client_customer`

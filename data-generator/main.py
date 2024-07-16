@@ -36,25 +36,25 @@ fake.add_provider(banking_products_provider)
 required_customers = 100
 
 # Generate unique emails
-unique_emails_iag = [fake.unique.email() for _ in range(90)]
-unique_emails_trademe = [fake.unique.email() for _ in range(90)]
+unique_emails_client_a = [fake.unique.email() for _ in range(90)]
+unique_emails_client_b = [fake.unique.email() for _ in range(90)]
 
 # Generate common emails
 common_emails = [fake.unique.email() for _ in range(10)]
 
 # Combine unique and common emails
-emails_iag = unique_emails_iag + common_emails
-emails_trademe = unique_emails_trademe + common_emails
+emails_client_a = unique_emails_client_a + common_emails
+emails_client_b = unique_emails_client_b + common_emails
 
 # Shuffle the emails to mix common emails within the datasets
-fake.random.shuffle(emails_iag)
-fake.random.shuffle(emails_trademe)
+fake.random.shuffle(emails_client_a)
+fake.random.shuffle(emails_client_b)
 
 # Number of calls per customer
 minimum_call_volume_per_customer = 0
 maximum_call_volume_per_customer = 7
 
-def generate_data_iag(emails):
+def generate_data_client_a(emails):
     customer_id = 0
     customers = []
     calls = []
@@ -67,20 +67,20 @@ def generate_data_iag(emails):
         customer_id += 1
     
     # Write customers to CSV
-    with open("iag_customers.csv", mode='w', newline='') as file:
+    with open("client_a_customers.csv", mode='w', newline='') as file:
         writer = csv.DictWriter(file, fieldnames=['id', 'name', 'address', 'email'])
         writer.writeheader()
         for customer in customers:
             writer.writerow({'id': customer.id, 'name': customer.name, 'address': customer.address, 'email': customer.email})
     
     # Write calls to CSV
-    with open("iag_calls.csv", mode='w', newline='') as file:
+    with open("client_a_calls.csv", mode='w', newline='') as file:
         writer = csv.DictWriter(file, fieldnames=['id', 'customer_id', 'call_datetime', 'product'])
         writer.writeheader()
         for call in calls:
             writer.writerow({'id': call.id, 'customer_id': call.customer_id, 'call_datetime': call.call_datetime.strftime('%Y-%m-%d %H:%M:%S'), 'product': call.product})
 
-def generate_data_trademe(emails):
+def generate_data_client_b(emails):
     customer_id = 0
     customers = []
     for email in emails:
@@ -89,12 +89,12 @@ def generate_data_trademe(emails):
         customer_id += 1
     
     # Write customers to CSV
-    with open("trademe_customers.csv", mode='w', newline='') as file:
+    with open("client_b_customers.csv", mode='w', newline='') as file:
         writer = csv.DictWriter(file, fieldnames=['id', 'name', 'email'])
         writer.writeheader()
         for customer in customers:
             writer.writerow({'id': customer.id, 'name': customer.name, 'email': customer.email})
 
 # Generate datasets
-generate_data_iag(emails_iag)
-generate_data_trademe(emails_trademe)
+generate_data_client_a(emails_client_a)
+generate_data_client_b(emails_client_b)

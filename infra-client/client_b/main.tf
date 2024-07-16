@@ -49,9 +49,9 @@ resource "google_storage_bucket" "data_bucket" {
   location = google_bigquery_dataset.customers_dataset.location
 }
 
-resource "google_storage_bucket_object" "trademe_customers_file" {
-  name         = "trademe_customers.csv"
-  source       = "../../data-generator-v2/trademe_customers.csv"
+resource "google_storage_bucket_object" "client_b_customers_file" {
+  name         = "client_b_customers.csv"
+  source       = "../../data-generator-v2/client_b_customers.csv"
   content_type = "text/plain"
   bucket       = google_storage_bucket.data_bucket.id
 }
@@ -82,7 +82,7 @@ resource "google_bigquery_table" "customer_table" {
   external_data_configuration {
     source_format = "CSV"
     autodetect    = true
-    source_uris   = ["gs://${google_storage_bucket.data_bucket.name}/${google_storage_bucket_object.trademe_customers_file.name}"]
+    source_uris   = ["gs://${google_storage_bucket.data_bucket.name}/${google_storage_bucket_object.client_b_customers_file.name}"]
     csv_options {
       quote             = "\""
       skip_leading_rows = 1
